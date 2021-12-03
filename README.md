@@ -1,4 +1,4 @@
-# pytorch-deeplab-xception
+# pytorch-DFR
 
 **Update on 2018/12/06. Provide model trained on VOC and SBD datasets.**  
 
@@ -6,23 +6,29 @@
 
 ### TODO
 - [x] Support different backbones
-- [x] Support VOC, SBD, Cityscapes and COCO datasets
 - [x] Multi-GPU training
 
 
 
-| Backbone  | train/eval os  |mIoU in val |Pretrained Model|
+| Backbone  | train/eval os  |mIoU  |rIOU|
 | :-------- | :------------: |:---------: |:--------------:|
-| ResNet    | 16/16          | 78.43%     | [google drive](https://drive.google.com/open?id=1NwcwlWqA-0HqAPk3dSNNPipGMF0iS0Zu) |
-| MobileNet | 16/16          | 70.81%     | [google drive](https://drive.google.com/open?id=1G9mWafUAj09P4KvGSRVzIsV_U5OqFLdt) |
-| DRN       | 16/16          | 78.87%     | [google drive](https://drive.google.com/open?id=131gZN_dKEXO79NknIQazPJ-4UmRrZAfI) |
+| ResNet    | 16/16          | 0.814    | 0.845 |
+| MobileNet | 16/16          | 0.820    | 0.856 |
+| DRN       | 16/16          | 0.847    | 0.866 |
+| Xception  | 16/16          | 0.840    | 0.866 |
+| CSPDRN-S  | 16/16          | 0.839    | 0.867 |
+| CSPDRN-M  | 16/16          | 0.841    | 0.866 |
+| CSPDRN-L  | 16/16          | 0.842    | 0.869 |
+| CSPDRN-X  | 16/16          | 0.850    | 0.875 |
 
 
 
 ### Introduction
-This is a PyTorch(0.4.1) implementation of [DeepLab-V3-Plus](https://arxiv.org/pdf/1802.02611). It
-can use Modified Aligned Xception and ResNet as backbone. Currently, we train DeepLab V3 Plus
-using Pascal VOC 2012, SBD and Cityscapes datasets.
+This is a PyTorch(0.4.1) implementation of DFR. 
+
+![Results](doc/steps.png)
+
+![Results](doc/principle4SRM.png)
 
 ![Results](doc/results.png)
 
@@ -47,13 +53,13 @@ The code was tested with Anaconda and Python 3.6. After installing the Anaconda 
 ### Training
 Follow steps below to train your model:
 
-0. Configure your dataset path in [mypath.py](https://github.com/jfzhang95/pytorch-deeplab-xception/blob/master/mypath.py).
+0. Configure your dataset path in [mypath.py](https://github.com/ksws0499733/DFR/blob/master/mypath.py).
 
 1. Input arguments: (see full input arguments via python train.py --help):
     ```Shell
     usage: train.py [-h] [--backbone {resnet,xception,drn,mobilenet}]
-                [--out-stride OUT_STRIDE] [--dataset {pascal,coco,cityscapes}]
-                [--use-sbd] [--workers N] [--base-size BASE_SIZE]
+                [--out-stride OUT_STRIDE] [--dataset {iRailway}]
+                [--workers N] [--base-size BASE_SIZE]
                 [--crop-size CROP_SIZE] [--sync-bn SYNC_BN]
                 [--freeze-bn FREEZE_BN] [--loss-type {ce,focal}] [--epochs N]
                 [--start_epoch N] [--batch-size N] [--test-batch-size N]
@@ -64,16 +70,7 @@ Follow steps below to train your model:
                 [--checkname CHECKNAME] [--ft] [--eval-interval EVAL_INTERVAL]
                 [--no-val]
 
-    ```
 
-2. To train deeplabv3+ using Pascal VOC dataset and ResNet as backbone:
-    ```Shell
-    bash train_voc.sh
-    ```
-3. To train deeplabv3+ using COCO dataset and ResNet as backbone:
-    ```Shell
-    bash train_coco.sh
-    ```    
 
 ### Acknowledgement
 [PyTorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding)
@@ -81,3 +78,9 @@ Follow steps below to train your model:
 [Synchronized-BatchNorm-PyTorch](https://github.com/vacancy/Synchronized-BatchNorm-PyTorch)
 
 [drn](https://github.com/fyu/drn)
+
+[CBAM](https://github.com/elbuco1/CBAM)
+
+[pytorch-deeplab-xception](https://github.com/jfzhang95/pytorch-deeplab-xception/)
+
+[yolov5](https://github.com/ultralytics/yolov5)
