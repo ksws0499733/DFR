@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
-from modeling.my_atention import *
+from modeling.cbam import *
 
 class Decoder(nn.Module):
     def __init__(self, num_classes, backbone, BatchNorm, attention = True):

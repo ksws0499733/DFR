@@ -4,10 +4,10 @@ from torchsummary import summary
 
 import sys
 
-sys.path.append(r'/home/nvidia/Deeplab-upload')
-print(sys.path)
-# from models.experimental import *
-from modeling.my_experimental import *
+# sys.path.append(r'/home/nvidia/Deeplab-upload')
+# print(sys.path)
+# # from models.experimental import *
+from modeling.experimental import *
 
 
 class Detect(nn.Module):
@@ -68,7 +68,6 @@ class CSPnet(nn.Module):
             print('Overriding %s nc=%g with nc=%g' % (cfg, self.yaml['nc'], nc))
             self.yaml['nc'] = nc  # override yaml value
         self.model, self.save = parse_model_bk(deepcopy(self.yaml), ch=[ch])  # model, savelist, ch_out
-        # print([x.shape for x in self.forward(torch.zeros(1, ch, 64, 64))])
 
         # Build strides, anchors
         m = self.model[-1]  # Detect()

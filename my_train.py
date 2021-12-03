@@ -21,16 +21,7 @@ from dataloaders import make_data_loader
 from modeling.sync_batchnorm.replicate import patch_replication_callback
 from modeling.my_scnn2 import *
 
-
-
-
 from PIL import Image 
-
-bestFile = r'run/my/deeplab-resnet-SCNN/model_best.pth.tar'
-bestPt = r'run/my/deeplab-resnet-SCNN/model_best.pt'
-outputFile = r'run/my/deeplab-resnet-SCNN/output/'
-checkFile = r'deeplab-resnet-SCNN'
-bestOut = r'run/my/deeplab-resnet-SCNN/net1_resnet_deeplab.pkl'
 
 def saveimage(img,pred, root, startID, video_writer_list = None):
     N,H,W,C = img.shape
@@ -115,12 +106,9 @@ class Trainer(object):
         kwargs = {'num_workers': args.workers, 'pin_memory': True}
         self.train_loader, self.val_loader, self.test_loader, self.nclass = make_data_loader(args, **kwargs)
         print('class number: ',self.nclass)
-        #3----- Define network
-      
-        model = SRNN(backbone=args.backbone,neck=args.neck, output_stride=16, num_classes= NUM_CLASSES)    
 
-        
-        
+        #3----- Define network      
+        model = SRNN(backbone=args.backbone,neck=args.neck, output_stride=16, num_classes= NUM_CLASSES)    
 
         #4-----Define train params
         train_params = [{'params': model.get_1x_lr_params(), 'lr': args.lr},
@@ -130,34 +118,29 @@ class Trainer(object):
         #5----- Define Optimizer
         optimizer = torch.optim.SGD(train_params, momentum=args.momentum,
                                     weight_decay=args.weight_decay, nesterov=args.nesterov)
-        # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
-        #                             weight_decay=args.weight_decay, nesterov=args.nesterov)
+
         #6----- Define Loss function
-        #6.1----- whether to use class balanced weights
+            #6.1----- whether to use class balanced weights
         if args.use_balanced_weights:
             weight = torch.from_numpy(np.array([1.75, 9,7.6, 15]).astype(np.float32))
-            print('weight= ',weight)
         else:
             weight = None
-        #6.2------ Loss function
+            #6.2------ Loss function
         self.criterion = SegmentationLosses(weight=weight, cuda=args.cuda).build_loss(mode=args.loss_type)
 
-        #6.3------ DFR function
+            #6.3------ DFR function
         self.DFR = blockline2.railSegmenter()
-
         
-        self.model, self.optimizer = model, optimizer
+        self.model, self.optimizer = model, optimizer        
         
-        self.alf = 0.8
-        
-        # Define Evaluator
-        self.evaluator = Evaluator(self.nclass)
-        self.evaluator_rail = Evaluator(2)
+        #7----- Define Evaluator
+        self.evaluator_MIOU = Evaluator(self.nclass)
+        self.evaluator_RIOU = Evaluator(2)
         # Define lr scheduler
         self.scheduler = LR_Scheduler(args.lr_scheduler, args.lr,
                                             args.epochs, len(self.train_loader))
 
-        # Using cuda
+        #8----- Using cuda
         if args.cuda:
             os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
             print("GPU CNT: ",torch.cuda.device_count())
@@ -166,40 +149,40 @@ class Trainer(object):
             patch_replication_callback(self.model)
             self.model = self.model.cuda()
 
-        #7------ 恢复模型（检查点） Resuming checkpoint
+        #9------  Resuming checkpoint
         self.best_pred = 0.0
         if args.resume is not None:
-        #8.1--- 从文件路径名，加载检查点
+            #9.1--- load checkpoint
             if not os.path.isfile(args.resume):
                 raise RuntimeError("=> no checkpoint found at '{}'" .format(args.resume))
             checkpoint = torch.load(args.resume)
-        #8.2--- 起始点
+            #9.2--- start epoch
             args.start_epoch = checkpoint['epoch']
-        #8.3--- 向模型加载权重
+            #9.3--- load model
             if args.cuda:
                 self.model.module.load_state_dict(checkpoint['state_dict'])
             else:
                 self.model.load_state_dict(checkpoint['state_dict'])
-        #8.4--- 向优化器加载权重。
+            #9.4--- loding optimizer
             if not args.ft:
                 self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.best_pred = checkpoint['best_pred']
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
 
-        #B----- 额外参数设置2（start_epoch） Clear start epoch if fine-tuning
+        #10-----  Clear start epoch if fine-tuning
         if args.ft:
             args.start_epoch = 0
 
     
     def training(self, epoch):
         train_loss = 0.0
-        self.model.train()  #激活所有dropout层和BN层
+        self.model.train()  
         tbar = tqdm(self.train_loader)
         num_img_tr = len(self.train_loader)
         for i, sample in enumerate(tbar):
             #1-----sample
-            image, target = sample['image'], sample['label']  #一个字典，字典包含{image,label}两个key
+            image, target = sample['image'], sample['label'] 
             
             if self.args.cuda:
                 image, target = image.cuda(), target.cuda()
@@ -224,8 +207,8 @@ class Trainer(object):
 
     def validation(self, epoch):
         self.model.eval()
-        self.evaluator.reset()
-        self.evaluator_rail.reset()
+        self.evaluator_MIOU.reset()
+        self.evaluator_RIOU.reset()
         tbar = tqdm(self.val_loader, desc='\r')
         test_loss = 0.0
         for i, sample in enumerate(tbar):
@@ -245,26 +228,27 @@ class Trainer(object):
             pred = output.data.cpu().numpy()  # pred
             target = target.cpu().numpy()       # ground truth
             pred = np.argmax(pred, axis=1)      # pred mask
-            self.evaluator.add_batch(target, pred)
+            self.evaluator_MIOU.add_batch(target, pred)
             
             _target = target
             _target[_target<2] = 0
             _target[_target>=2] = 1
             _pred = pred
             _pred = _pred.astype('uint8')
-            _pred = self.DFR.run4train(_pred)  #******DFR
-            self.evaluator_rail.add_batch(_target, _pred.astype('uint8'))
+            _pred[_pred<2] = 0
+            _pred[_pred>=2] = 1
+            # _pred = self.DFR.run4train(_pred)  #******DFR
+            self.evaluator_RIOU.add_batch(_target, _pred.astype('uint8'))
         
-        #总结
-        Acc = self.evaluator.Pixel_Accuracy()
-        Acc_class = self.evaluator.Pixel_Accuracy_Class()
-        mIoU = self.evaluator.Mean_Intersection_over_Union()
-        FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
+        Acc = self.evaluator_MIOU.Pixel_Accuracy()
+        Acc_class = self.evaluator_MIOU.Pixel_Accuracy_Class()
+        mIoU = self.evaluator_MIOU.Mean_Intersection_over_Union()
+        FWIoU = self.evaluator_MIOU.Frequency_Weighted_Intersection_over_Union()
 
-        Acc2 = self.evaluator_rail.Pixel_Accuracy()
-        Acc_class2 = self.evaluator_rail.Pixel_Accuracy_Class()
-        mIoU2 = self.evaluator_rail.Mean_Intersection_over_Union()
-        FWIoU2 = self.evaluator_rail.Frequency_Weighted_Intersection_over_Union()
+        Acc2 = self.evaluator_RIOU.Pixel_Accuracy()
+        Acc_class2 = self.evaluator_RIOU.Pixel_Accuracy_Class()
+        mIoU2 = self.evaluator_RIOU.Mean_Intersection_over_Union()
+        FWIoU2 = self.evaluator_RIOU.Frequency_Weighted_Intersection_over_Union()
 
         self.writer.add_scalar('val/total_loss_epoch', test_loss, epoch)
         self.writer.add_scalar('val/Acc', Acc, epoch)
@@ -314,11 +298,6 @@ class Trainer(object):
         checkpoint = torch.load(self.args.bestFile)
             
         self.model.module.load_state_dict(checkpoint['state_dict'])
-        # self.model.eval() 
-        # model_cpu = self.model
-        # example = torch.rand(1, 3, 480, 360).cuda()
-        # traced_script_module = torch.jit.trace(model_cpu, example)
-        # traced_script_module.save(self.args.bestPt)
         torch.save(self.model.module, self.args.bestOut)                       #保存整个神经网络到net1.pkl中
 
         self.model.eval()
@@ -351,10 +330,9 @@ def main():
                         help='neck name (default: A-S)')
     parser.add_argument('--out-stride', type=int, default=16,
                         help='network output stride (default: 8)')
-    parser.add_argument('--dataset', type=str, default='mycls3',
-                        choices=['pascal', 'coco', 'cityscapes','my','mycls3','mycls5'],
+    parser.add_argument('--dataset', type=str, default='iRailway',
                         help='dataset name (default: pascal)')
-    parser.add_argument('--dataAug', type=str, default='all',
+    parser.add_argument('--dataAug', type=str, default='no',
                         choices=['no', 'masico','dig', 'affine','all'],
                         help='data argument type(default: all)')
     parser.add_argument('--use-sbd', action='store_true', default=True,
@@ -370,7 +348,7 @@ def main():
     parser.add_argument('--freeze-bn', type=bool, default=False,
                         help='whether to freeze bn parameters (default: False)')
     parser.add_argument('--loss-type', type=str, default='ce',
-                        choices=['ce', 'focal', 'myloss','lova','myloss2'],
+                        choices=['ce', 'focal'],
                         help='loss func type (default: ce)')
     # training hyper params
     parser.add_argument('--epochs', type=int, default=None, metavar='N',
@@ -422,71 +400,62 @@ def main():
     parser.add_argument('--add-opp', action='store_true', default=True,
                         help='add opp sample')
 
-    for itr in range(1):
 
-        args = parser.parse_args()
+    args = parser.parse_args()
+    
+    args.cuda = not args.no_cuda and torch.cuda.is_available()
+    if args.cuda:
+        try:
+            args.gpu_ids = [int(s) for s in args.gpu_ids.split(',')]
+            
+        except ValueError:
+            raise ValueError('Argument --gpu_ids must be a comma-separated list of integers only')
+    
 
-        # args.no_cuda = True
-        #args.resume = None
-        
-        args.cuda = not args.no_cuda and torch.cuda.is_available()
-        print('---------------cuda := ',args.cuda)
-        if args.cuda:
-            try:
-                args.gpu_ids = [int(s) for s in args.gpu_ids.split(',')]
-                
-            except ValueError:
-                raise ValueError('Argument --gpu_ids must be a comma-separated list of integers only')
-        
+    if args.sync_bn is None:
+        if args.cuda and len(args.gpu_ids) > 1:
+            args.sync_bn = True
+        else:
+            args.sync_bn = False
 
-        if args.sync_bn is None:
-            if args.cuda and len(args.gpu_ids) > 1:
-                args.sync_bn = True
-            else:
-                args.sync_bn = False
+    # default settings for epochs, batch_size and lr
+    if args.epochs is None:
+        args.epochs = 30
 
-        # default settings for epochs, batch_size and lr
-        if args.epochs is None:
-            args.epochs = 30
+    if args.batch_size is None:
+        args.batch_size = 4 * len(args.gpu_ids)
 
-        if args.batch_size is None:
-            args.batch_size = 4 * len(args.gpu_ids)
+    if args.test_batch_size is None:
+        args.test_batch_size = args.batch_size
 
-        if args.test_batch_size is None:
-            args.test_batch_size = args.batch_size
+    if args.lr is None:
+        args.lr = 0.01 / (4 * len(args.gpu_ids)) * args.batch_size
 
-        if args.lr is None:
-            args.lr = 0.01 / (4 * len(args.gpu_ids)) * args.batch_size
+    if args.checkname is None:
+        args.checkname = args.backbone+'-'+args.neck+'-'+args.loss_type+'-'+args.dataset
 
+    
+    args.bestFile = os.path.join('run',args.dataset, args.checkname,'model_best.pth.tar' )
+    args.bestPt = os.path.join('run',args.dataset, args.checkname,'model_best.pt' )
+    args.outputFile = os.path.join('run',args.dataset, args.checkname,'output' )
+    args.bestOut = os.path.join('run',args.dataset, args.checkname,'model_para.pkl' )
+    if not os.path.exists(args.outputFile):
+            os.makedirs(args.outputFile)    #set output path
+    
 
-        if args.checkname is None:
-            args.checkname = args.backbone+'-'+args.neck+'-'+args.loss_type+'-'+args.dataset
-        # print(args)
-        
-        args.bestFile = os.path.join('run',args.dataset, args.checkname,'model_best.pth.tar' )
-        args.bestPt = os.path.join('run',args.dataset, args.checkname,'model_best.pt' )
-        args.outputFile = os.path.join('run',args.dataset, args.checkname,'output' )
-        args.bestOut = os.path.join('run',args.dataset, args.checkname,'model_para.pkl' )
-        if not os.path.exists(args.outputFile):
-                os.makedirs(args.outputFile)
-        
-        # opimg = np.zeros((500,500,3),dtype='uint32')
-        # cv2.imwrite('opp_lable.png',opimg)
-        # return
+    torch.manual_seed(args.seed)
+    trainer = Trainer(args)
 
-        torch.manual_seed(args.seed)
-        trainer = Trainer(args)
+    print('Starting Epoch:', trainer.args.start_epoch)
+    print('Total Epoches:', trainer.args.epochs)
 
-        print('Starting Epoch:', trainer.args.start_epoch)
-        print('Total Epoches:', trainer.args.epochs)
+    for epoch in range(trainer.args.start_epoch, trainer.args.epochs):
+        trainer.training(epoch)
+        if  epoch % 5 == 4:
+            trainer.validation(epoch)  
+    trainer.test(0)
 
-        for epoch in range(trainer.args.start_epoch, trainer.args.epochs):
-            trainer.training(epoch)
-            if  epoch % 5 == 4:
-                trainer.validation(epoch)  #验证模型
-        trainer.test(0)
-
-        trainer.writer.close()
+    trainer.writer.close()
 
 if __name__ == "__main__":
 

@@ -9,8 +9,8 @@ from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 from modeling.aspp import build_aspp
 from modeling.decoder import build_decoder
 from modeling.backbone import build_backbone
-from modeling.my_orderConv import build_BSRM
-from modeling.my_atention import *
+from modeling.SRM import build_BSRM
+from modeling.cbam import *
 
 
 class SRNN(nn.Module):
