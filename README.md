@@ -30,7 +30,7 @@ This is a PyTorch(0.4.1) implementation of DFR.
 
 ![Results](doc/principle4SRM.png)
 
-![Results](doc/results.png)
+![Results](doc/result.png)
 
 
 ### Installation
