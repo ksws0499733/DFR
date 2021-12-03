@@ -38,8 +38,8 @@ The code was tested with Anaconda and Python 3.6. After installing the Anaconda 
 
 0. Clone the repo:
     ```Shell
-    git clone https://github.com/jfzhang95/pytorch-deeplab-xception.git
-    cd pytorch-deeplab-xception
+    git clone https://github.com/ksws0499733/DFR.git
+    cd DFR
     ```
 
 1. Install dependencies:
