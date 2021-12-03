@@ -55,7 +55,7 @@ Follow steps below to train your model:
 
 0. Configure your dataset path in [mypath.py](https://github.com/ksws0499733/DFR/blob/master/mypath.py).
 
-The dataset can be download in [baduCloud](https://pan.baidu.com/s/1zTQU_rilu4I_klvCgxi70Q) (Extraction code: 69jq).
+The dataset can be download in [baiduCloud](https://pan.baidu.com/s/1zTQU_rilu4I_klvCgxi70Q) (Extraction code: 69jq).
 
 1. Input arguments: (see full input arguments via python train.py --help):
     ```Shell
