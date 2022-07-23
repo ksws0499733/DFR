@@ -73,7 +73,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(nn.Module):
-    def __init__(self, output_stride=8, BatchNorm=None, width_mult=1., pretrained=False):
+    def __init__(self, output_stride=8, BatchNorm=None, width_mult=1.,inChannal=3, pretrained=False):
         super(MobileNetV2, self).__init__()
         block = InvertedResidual
         input_channel = 16
@@ -93,7 +93,7 @@ class MobileNetV2(nn.Module):
 
     #2----- 输入层 building first layer
         input_channel = int(input_channel * width_mult)
-        self.features = [conv_bn(3, input_channel, 2, BatchNorm)]  #先进行一次初始化conv（s=2，输入通道=3，输出=input_c）
+        self.features = [conv_bn(inChannal, input_channel, 2, BatchNorm)]  #先进行一次初始化conv（s=2，输入通道=3，输出=input_c）
         current_stride *= 2     #输入层之后就缩小2倍
     #3----- 隐藏层（卷积模组）序列 building inverted residual blocks
         for t, c, n, s in interverted_residual_setting:

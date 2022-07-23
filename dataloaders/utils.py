@@ -96,7 +96,6 @@ def get_cityscapes_labels():
         [0, 0, 230],
         [119, 11, 32]])
 
-
 def get_pascal_labels():
     """Load the mapping that associates pascal classes with label colors
     Returns:
@@ -108,3 +107,79 @@ def get_pascal_labels():
                        [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
                        [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
                        [0, 64, 128]])
+
+def collate_fn(batch):
+    
+    # batch = [{'image': img, 'label': clss,'instence': inss}]
+    if isinstance( batch[0], dict):
+        keys = batch[0].keys()
+        imgs = [sample['image'] for sample in batch] 
+        clss = [sample['label'] for sample in batch]
+        inss = [sample['instence'] for sample in batch]
+
+        imgs = list(filter(lambda x: x is not None, imgs )) 
+        clss = list(filter(lambda x: x is not None, clss ))
+        inss = list(filter(lambda x: x is not None, inss ))
+
+        imgs = torch.stack(imgs, dim = 0)
+        clss = torch.stack(clss, dim = 0)
+        inss = nested_tensor_from_tensor_list(inss)
+
+        if 'mask' in keys:
+            mask = [sample['mask'] for sample in batch]
+            mask = torch.stack(mask, dim = 0)
+            return {'image':imgs, 'label':clss,'instence':inss,'mask':mask}
+        return {'image':imgs, 'label':clss,'instence':inss}
+    elif isinstance( batch[0], list):
+        batch_list = []
+        keys = batch[0][0].keys()
+
+        # for sample in batch:
+        #     print('batch', len(sample))
+
+        for _idx in range(len(batch[0])):
+            # print('collate_fn',_idx,' / ',len(batch[0]))
+            imgs = [sample[_idx]['image'] for sample in batch] 
+            clss = [sample[_idx]['label'] for sample in batch]
+            inss = [sample[_idx]['instence'] for sample in batch]
+
+            imgs = list(filter(lambda x: x is not None, imgs )) 
+            clss = list(filter(lambda x: x is not None, clss ))
+            inss = list(filter(lambda x: x is not None, inss ))
+
+            imgs = torch.stack(imgs, dim = 0)
+            clss = torch.stack(clss, dim = 0)
+            inss = nested_tensor_from_tensor_list(inss)
+
+            if 'mask' in keys:
+                mask = [sample[_idx]['mask'] for sample in batch]
+                mask = torch.stack(mask, dim = 0)
+                sample = {'image':imgs, 'label':clss,'instence':inss,'mask':mask}
+            else:
+                sample = {'image':imgs, 'label':clss,'instence':inss}
+
+            batch_list.append(sample)
+        # print('collate_fn', len(batch_list))
+        return batch_list
+
+def _max_by_axis(the_list):
+    maxes = the_list[0]
+    for sublist in the_list[1:]:
+        for index, item in enumerate(sublist):
+            maxes[index] = max(maxes[index], item)
+    return maxes
+
+def nested_tensor_from_tensor_list(tensor_list):
+    # TODO make this more general
+    if tensor_list[0].ndim == 3:
+        # TODO make it support different-sized images
+        max_size = _max_by_axis([list(img.shape) for img in tensor_list])  # N*W*H
+        batch_shape = [len(tensor_list)] + max_size
+        dtype = tensor_list[0].dtype
+        device = tensor_list[0].device
+        tensor = torch.zeros(batch_shape, dtype=dtype, device=device)
+        for img, pad_img in zip(tensor_list, tensor):
+            pad_img[: img.shape[0], : img.shape[1], : img.shape[2]].copy_(img)
+    else:
+        raise ValueError('not supported')
+    return tensor

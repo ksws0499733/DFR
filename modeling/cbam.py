@@ -1,14 +1,9 @@
-import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from modeling.sync_batchnorm.batchnorm import SynchronizedBatchNorm2d
 
-class NoAttention(nn.Module):
-    def __init__(self):
-        super(NoAttention, self).__init__()
-    def forward(self, x):
-        return x
 
 class ChannelAttention(nn.Module):
     def __init__(self, in_planes, ratio=16):
@@ -45,3 +40,16 @@ class SpatialAttention(nn.Module):
         x = torch.cat([avg_out, max_out], dim=1)
         x = self.conv1(x)
         return self.sigmoid(x)
+
+class CBAM(nn.Module):
+    def __init__(self, in_planes, ratio=16, kernel_size=7):
+        super(CBAM, self).__init__()
+        self.ca = ChannelAttention(in_planes, ratio)
+        self.sa = SpatialAttention(kernel_size)
+
+    def forward(self, x):
+        ac1 = self.ca(x)
+        x = ac1*x
+        as1 = self.sa(x)
+        x = as1*x
+        return x

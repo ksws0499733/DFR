@@ -1,0 +1,7 @@
+python train_offline.py \
+--backbone=CSPnet \
+--dataset=iRailway \
+--dataAug=no \
+--loss-type=ce \
+--batch-size=16 \
+--epochs=10

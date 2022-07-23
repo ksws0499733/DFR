@@ -103,6 +103,7 @@ class DRN(nn.Module):
 
     def __init__(self, block, layers, arch='D',
                  channels=(16, 32, 64, 128, 256, 512, 512, 512),
+                 inChannal = 3,
                  BatchNorm=None):
         super(DRN, self).__init__()
         self.inplanes = channels[0]
@@ -110,7 +111,7 @@ class DRN(nn.Module):
         self.arch = arch
 
         if arch == 'C':
-            self.conv1 = nn.Conv2d(3, channels[0], kernel_size=7, stride=1,
+            self.conv1 = nn.Conv2d(inChannal, channels[0], kernel_size=7, stride=1,
                                    padding=3, bias=False)
             self.bn1 = BatchNorm(channels[0])
             self.relu = nn.ReLU(inplace=True)
@@ -122,7 +123,7 @@ class DRN(nn.Module):
 
         elif arch == 'D':
             self.layer0 = nn.Sequential(
-                nn.Conv2d(3, channels[0], kernel_size=7, stride=1, padding=3,
+                nn.Conv2d(inChannal, channels[0], kernel_size=7, stride=1, padding=3,
                           bias=False),
                 BatchNorm(channels[0]),
                 nn.ReLU(inplace=True)
@@ -236,11 +237,11 @@ class DRN(nn.Module):
 
 class DRN_A(nn.Module):
 
-    def __init__(self, block, layers, BatchNorm=None):
+    def __init__(self, block, layers,inChannal=3, BatchNorm=None):
         self.inplanes = 64
         super(DRN_A, self).__init__()
         self.out_dim = 512 * block.expansion
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(inChannal, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = BatchNorm(64)
         self.relu = nn.ReLU(inplace=True)
@@ -297,15 +298,15 @@ class DRN_A(nn.Module):
 
         return x
 
-def drn_a_50(BatchNorm, pretrained=True):
-    model = DRN_A(Bottleneck, [3, 4, 6, 3], BatchNorm=BatchNorm)
+def drn_a_50(BatchNorm,inChannal=3, pretrained=True):
+    model = DRN_A(Bottleneck, [3, 4, 6, 3],inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 
 
-def drn_c_26(BatchNorm, pretrained=True):
-    model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 1, 1], arch='C', BatchNorm=BatchNorm)
+def drn_c_26(BatchNorm, inChannal=3,pretrained=True):
+    model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 1, 1], arch='C',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-c-26'])
         del pretrained['fc.weight']
@@ -314,8 +315,8 @@ def drn_c_26(BatchNorm, pretrained=True):
     return model
 
 
-def drn_c_42(BatchNorm, pretrained=True):
-    model = DRN(BasicBlock, [1, 1, 3, 4, 6, 3, 1, 1], arch='C', BatchNorm=BatchNorm)
+def drn_c_42(BatchNorm, inChannal=3,pretrained=True):
+    model = DRN(BasicBlock, [1, 1, 3, 4, 6, 3, 1, 1], arch='C',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-c-42'])
         del pretrained['fc.weight']
@@ -324,8 +325,8 @@ def drn_c_42(BatchNorm, pretrained=True):
     return model
 
 
-def drn_c_58(BatchNorm, pretrained=True):
-    model = DRN(Bottleneck, [1, 1, 3, 4, 6, 3, 1, 1], arch='C', BatchNorm=BatchNorm)
+def drn_c_58(BatchNorm, inChannal=3,pretrained=True):
+    model = DRN(Bottleneck, [1, 1, 3, 4, 6, 3, 1, 1], arch='C',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-c-58'])
         del pretrained['fc.weight']
@@ -334,8 +335,8 @@ def drn_c_58(BatchNorm, pretrained=True):
     return model
 
 
-def drn_d_22(BatchNorm, pretrained=True):
-    model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 1, 1], arch='D', BatchNorm=BatchNorm)
+def drn_d_22(BatchNorm,inChannal=3, pretrained=True):
+    model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 1, 1], arch='D',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-d-22'])
         del pretrained['fc.weight']
@@ -344,8 +345,8 @@ def drn_d_22(BatchNorm, pretrained=True):
     return model
 
 
-def drn_d_24(BatchNorm, pretrained=True):
-    model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 2, 2], arch='D', BatchNorm=BatchNorm)
+def drn_d_24(BatchNorm,inChannal=3, pretrained=True):
+    model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 2, 2], arch='D',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-d-24'])
         del pretrained['fc.weight']
@@ -354,8 +355,8 @@ def drn_d_24(BatchNorm, pretrained=True):
     return model
 
 
-def drn_d_38(BatchNorm, pretrained=True):
-    model = DRN(BasicBlock, [1, 1, 3, 4, 6, 3, 1, 1], arch='D', BatchNorm=BatchNorm)
+def drn_d_38(BatchNorm, inChannal=3,pretrained=True):
+    model = DRN(BasicBlock, [1, 1, 3, 4, 6, 3, 1, 1], arch='D',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-d-38'])
         del pretrained['fc.weight']
@@ -364,8 +365,8 @@ def drn_d_38(BatchNorm, pretrained=True):
     return model
 
 
-def drn_d_40(BatchNorm, pretrained=True):
-    model = DRN(BasicBlock, [1, 1, 3, 4, 6, 3, 2, 2], arch='D', BatchNorm=BatchNorm)
+def drn_d_40(BatchNorm,inChannal=3, pretrained=True):
+    model = DRN(BasicBlock, [1, 1, 3, 4, 6, 3, 2, 2], arch='D',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-d-40'])
         del pretrained['fc.weight']
@@ -374,8 +375,8 @@ def drn_d_40(BatchNorm, pretrained=True):
     return model
 
 
-def drn_d_54(BatchNorm, pretrained=True):
-    model = DRN(Bottleneck, [1, 1, 3, 4, 6, 3, 1, 1], arch='D', BatchNorm=BatchNorm)
+def drn_d_54(BatchNorm, inChannal=3,pretrained=True):
+    model = DRN(Bottleneck, [1, 1, 3, 4, 6, 3, 1, 1], arch='D',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-d-54'])
         del pretrained['fc.weight']
@@ -384,8 +385,8 @@ def drn_d_54(BatchNorm, pretrained=True):
     return model
 
 
-def drn_d_105(BatchNorm, pretrained=True):
-    model = DRN(Bottleneck, [1, 1, 3, 4, 23, 3, 1, 1], arch='D', BatchNorm=BatchNorm)
+def drn_d_105(BatchNorm,inChannal=3, pretrained=True):
+    model = DRN(Bottleneck, [1, 1, 3, 4, 23, 3, 1, 1], arch='D',inChannal=inChannal, BatchNorm=BatchNorm)
     if pretrained:
         pretrained = model_zoo.load_url(model_urls['drn-d-105'])
         del pretrained['fc.weight']

@@ -102,7 +102,7 @@ class AlignedXception(nn.Module):
     """
     Modified Alighed Xception
     """
-    def __init__(self, output_stride, BatchNorm,
+    def __init__(self, output_stride, BatchNorm,inChannal = 3,
                  pretrained=True):
         super(AlignedXception, self).__init__()
 
@@ -119,7 +119,7 @@ class AlignedXception(nn.Module):
 
 
         # Entry flow
-        self.conv1 = nn.Conv2d(3, 32, 3, stride=2, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(inChannal, 32, 3, stride=2, padding=1, bias=False)
         self.bn1 = BatchNorm(32)
         self.relu = nn.ReLU(inplace=True)
 
